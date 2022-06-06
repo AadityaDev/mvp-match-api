@@ -12,7 +12,6 @@ CREATE TABLE tbl_users
 INSERT INTO tbl_users(email, password) VALUES ("bushan@example.com", "12345");
 INSERT INTO tbl_users(email, password) VALUES ("bharath@example.com", "12345");
 
-
 CREATE TABLE demodb.tbl_maze
 (
 	id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -20,4 +19,11 @@ CREATE TABLE demodb.tbl_maze
     gridsize VARCHAR(4) NOT NULL
     -- ,
     -- walls VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE demodb.tbl_maze_wall
+(
+	id INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    maze_id int NOT NULL,
+    wall VARCHAR(4) NOT NULL
 );
