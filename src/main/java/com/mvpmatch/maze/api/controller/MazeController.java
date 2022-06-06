@@ -14,6 +14,9 @@ import com.mvpmatch.maze.api.model.MazeWall;
 import com.mvpmatch.maze.api.repository.MazeRepository;
 import com.mvpmatch.maze.api.repository.MazeWallRepository;
 import com.mvpmatch.maze.api.repository.UserRepository;
+import com.mvpmatch.maze.api.util.PathUtilMax;
+import com.mvpmatch.maze.api.util.PathUtilMin;
+import com.mvpmatch.maze.api.util.Util;
 
 import io.jsonwebtoken.lang.Collections;
 
@@ -111,8 +114,11 @@ public class MazeController {
 		Authentication authObject = null;
 		System.out.println("mazeId: "+mazeId);
 		System.out.println("steps: "+steps);
+		int rowSize, colSize;
 		Map<String, Object> map = new HashMap<String, Object>();
 		Map<String, Object> data = new HashMap<String, Object>();
+		int[][] maze;
+		char[][] mazeChar;
 		try {
 			String token = authorization.replace("Bearer ", "");
 			Map<String, Object> claims = new HashMap<>();
@@ -120,30 +126,108 @@ public class MazeController {
 			Maze mazeDetail = mazeRepository.findById(mazeId).get();
 			List<MazeWall> mazeWallDetail = wallRepository.findAllByMazeId(mazeId).get();
 			System.out.println("Maze: "+mazeDetail.getEntrance()+" => "+mazeDetail.getGridsize()+" Wall: "+mazeWallDetail);
+			rowSize = Integer.parseInt(mazeDetail.getGridsize().subSequence(0, 1).toString());
+			colSize = Integer.parseInt(mazeDetail.getGridsize().subSequence(2, 3).toString());
+			System.out.println("RowSize: "+rowSize+" , colSize: "+colSize);
+			maze = new int[rowSize][colSize];
+			String[][] st = new String[rowSize][colSize];
+			mazeChar = new char[rowSize][colSize];
 			int gridSize = Integer.parseInt(mazeDetail.getGridsize().subSequence(0, 1).toString());
+			int startRow =0, startCol = 0;
 			char ch = 'A';
 			String col = "";
 			Map<String, Integer> mapsa = new HashMap<>();
-			for(int i=0;i<gridSize;i++) {
-				for(int j=0;j<gridSize;j++) {
+			for(int i=0;i<rowSize;i++) {
+				for(int j=0;j<colSize;j++) {
 					col = ch+""+(j+1);
-					mapsa.put(col, 0);
-					System.out.print(ch+""+(j+1)+"-"+" ");
+					mapsa.put(col, 1);
+					st[i][j] = col;
+					// System.out.print(ch+""+(j+1)+"-"+" ");
+					// maze[i][j] = 1;
 				}
 				ch++;
 				col = "";
 				System.out.println();
 			}
+			// System.out.println("Before(1)");
+			// for(int i=0;i<rowSize;i++) {
+			// 	for(int j=0;j<colSize;j++) {
+			// 		System.out.print(maze[i][j]+" ");
+			// 	}
+			// 	System.out.println();
+			// }
 			mazeWallDetail.forEach(item->{
+				System.out.println("item: "+ item.getWall()+" => "+mapsa.containsKey(item.getWall()));
 				if(mapsa.containsKey(item.getWall())) {
-					mapsa.put(item.getWall(), 1);
+					
+					mapsa.put(item.getWall(), 0);
+					// System.out.println("Found: "+ item.getWall());
 				}
 			});
-			for(Map.Entry<String, Integer> hm: mapsa.entrySet()) {
-				System.out.println(hm.getKey()+" => "+hm.getValue());
+			// System.out.println("Before(2)");
+			// for(int i=0;i<gridSize;i++) {
+			// 	for(int j=0;j<gridSize;j++) {
+			// 		System.out.print(maze[i][j]+" ");
+			// 	}
+			// 	System.out.println();
+			// }
+			System.out.println("After");
+
+			ch = 'A';
+			col = "";
+			for(int i=0;i<rowSize;i++) {
+				for(int j=0;j<colSize;j++) {
+					col = ch+""+(j+1);
+					// mapsa.put(col, 0);
+					// System.out.print(ch+""+(j+1)+"-"+" ");
+					
+					if(mapsa.containsKey(col) && mapsa.get(col) == 0) {
+						maze[i][j] = 0;
+						mazeChar[i][j] = '0';
+					} else {
+						maze[i][j] = 1;
+						mazeChar[i][j] = '*';
+					}
+
+					if(mazeDetail.getEntrance().equals(col)) {
+						startRow = i;
+						startCol = j;
+						mazeChar[i][j] = 's';
+					}
+
+					if(i==rowSize-1&& j==colSize-1) {
+						mazeChar[i][j] = 'd';
+					}
+
+				}
+				ch++;
+				col = "";
+				System.out.println();
 			}
+			System.out.println("After");
+			for(int i=0;i<rowSize;i++) {
+				for(int j=0;j<colSize;j++) {
+					System.out.print(maze[i][j]+" ");
+				}
+				System.out.println();
+			}
+			// for(Map.Entry<String, Integer> hm: mapsa.entrySet()) {
+			// 	System.out.println(hm.getKey()+" => "+hm.getValue());
+			// }
+			if(steps.equals("min")) {
+				PathUtilMin.minDistance(mazeChar, st);
+				data.put("path", PathUtilMin.getMinPath());
+				System.out.println("min path: " + PathUtilMin.getMinPath());
+			} else {
+				PathUtilMax.initRowColumn(rowSize, colSize);
+				PathUtilMax.findLongestPath(maze, startRow, startCol, rowSize-1, colSize-1, st);
+				data.put("path", PathUtilMax.getMaxPath());
+				System.out.println("max path: " + PathUtilMax.getMaxPath());
+			}
+			data.put("unique", Util.findCount(maze, startRow, startCol, rowSize-1, colSize-1));
 			data.put("maze", mazeDetail);
 			data.put("mazewall", mazeWallDetail);
+			data.put("finalData", st);
 			map.put("data", data);
 			map.put("code", HttpStatus.OK);
 			response = new ResponseEntity<Map<String, Object>>(map, HttpStatus.OK);	
